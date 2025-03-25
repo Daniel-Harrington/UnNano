@@ -26,6 +26,7 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 
 ---
 ## Examples
+100x100 Pixel Scan:
 <p float="left">
   <img src="https://github.com/user-attachments/assets/904d0803-18f5-49d2-843c-04e2eadbbece" alt="scaled_cftest copy" width="200" />
   <img src="https://github.com/user-attachments/assets/5386cc74-b8b6-4ccc-bf03-1775d35bcae4" width="200" /> 
