@@ -25,3 +25,8 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 - Blender’s built-in texture interpolation is applied by default to smooth the displacement across the mesh.
 
 ---
+## Examples
+
+![scaled_cftest copy](https://github.com/user-attachments/assets/904d0803-18f5-49d2-843c-04e2eadbbece)
+![image](https://github.com/user-attachments/assets/5386cc74-b8b6-4ccc-bf03-1775d35bcae4)
+![image](https://github.com/user-attachments/assets/e1b7dd49-421b-4466-82df-59fa0759b683)
