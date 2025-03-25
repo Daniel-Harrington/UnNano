@@ -1,7 +1,3 @@
-Below is a revised version that preserves your original formatting while adding shields (badges) at the top, similar to your MIG example. Feel free to adjust the badge text or colors as needed.
-
----
-
 # UnNano  
 [![Microscopy](https://img.shields.io/badge/Microscopy-AFM-blue.svg)](#)  [![Blender](https://img.shields.io/badge/Blender-3D-orange.svg)](#)  [![Nanomaterials](https://img.shields.io/badge/Nanomaterials-Visualization-green.svg)](#)  [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](#)
 
