@@ -23,8 +23,9 @@ UnNano enables the conversion of Thorlabs AFM data into 3D printable meshes in ~
    
 5. **Add AFM Data**
    
-   Drag in your Thorlabs AFM output csv (in semicolon-delimited CSV format)
+   Drag in a Thorlabs AFM output csv (in semicolon-delimited CSV format)
 7. **Generate STL**
+   
    Hit the generation button and retrieve your 3D .stl file
 ---
 
