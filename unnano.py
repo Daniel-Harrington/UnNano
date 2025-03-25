@@ -23,6 +23,7 @@ from PIL import Image
 import pandas as pd
 import bpy
 import open3d as o3d
+import math
 
 
 def csv_to_32bit_float_inverted_tiff(input_filepath):
@@ -77,15 +78,6 @@ def csv_to_32bit_float_inverted_tiff(input_filepath):
     return output_path
 
 
-def convert_obj_to_stl(obj_filepath):
-
-    mesh = pymesh.load_mesh(str(Path(obj_filepath).resolve()))
-    stl_filepath = Path(obj_filepath.parent, Path.stem(obj_filepath) + ".stl")
-    pymesh.save_mesh(stl_filepath, mesh)
-    print("saved stl to ", stl_filepath)
-    return stl_filepath
-
-
 def generate_stl(tiff_filepath, settings):
     """
     Generates an STL from a TIFF displacement map using Blender (Fully Headless).
@@ -96,9 +88,10 @@ def generate_stl(tiff_filepath, settings):
     tiff_path = Path(tiff_filepath).resolve()
     output_path = Path(settings.get("output_path", "C:/temp/output.obj")).resolve()
     SampleName = settings.get("sample_name", "Example")
+    FontSize = settings.get("font_size", 1.00)
     blend_file_path = "model_template/scanModel.blend"
     bpy.ops.wm.open_mainfile(filepath=blend_file_path)
-
+    rotation_degrees = settings.get("rotation_degrees", 0)
     # Swap displacement texture for the new one
     obj = bpy.data.objects["SampleMesh"]
     displacement_modifier = obj.modifiers.get("AFM_Scan")
@@ -117,18 +110,23 @@ def generate_stl(tiff_filepath, settings):
     else:
         print("No displacement modifier found on the object.")
 
+    angle_radians = math.radians(rotation_degrees)
+    obj.rotation_mode = "XYZ"
+    obj.rotation_euler[2] += angle_radians
+    print(f"Applied a rotation of {rotation_degrees} degrees around Z-axis.")
     # Change Text
     text_obj = bpy.data.objects.get("SampleName")
     if text_obj and text_obj.type == "FONT":
         text_obj.data.body = SampleName
+        text_obj.data.size = FontSize
         print(f"Text object updated: {text_obj.data.body}")
     else:
         print("Text object not found or the object is not a text object.")
 
     # Save the modified .blend file
-    # output_blend_file = "modified_template.blend"
-    # bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
-    # print(f"Modified blend file saved to {output_blend_file}")
+    output_blend_file = "modified_template.blend"
+    bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
+    print(f"Modified blend file saved to {output_blend_file}")
 
     # Save the STL
     bpy.ops.wm.stl_export(filepath=str(output_path))
@@ -154,6 +152,20 @@ class SettingsWidget(QWidget):
         self.height_input.setDecimals(2)
         self.height_input.setValue(1.0)
 
+        self.font_size_label = QLabel("Font Size:")
+        self.font_size_input = QDoubleSpinBox()
+        self.font_size_input.setRange(0.1, 100.0)
+        self.font_size_input.setSingleStep(0.1)
+        self.font_size_input.setDecimals(2)
+        self.font_size_input.setValue(1.0)
+
+        self.rotation_label = QLabel("Rotation (degrees):")
+        self.rotation_input = QDoubleSpinBox()
+        self.rotation_input.setRange(-360, 360)
+        self.rotation_input.setSingleStep(90)
+        self.rotation_input.setDecimals(2)
+        self.rotation_input.setValue(0)
+
         self.output_folder_label = QLabel("Output Folder:")
         self.output_folder_line_edit = QLineEdit()
         self.output_folder_line_edit.setPlaceholderText("Select an output folder...")
@@ -176,6 +188,8 @@ class SettingsWidget(QWidget):
         self.form_layout.addRow(self.output_folder_label, folder_layout)
         self.form_layout.addRow(self.output_file_label, self.output_file_line_edit)
         self.form_layout.addRow(self.SampleName_label, self.SampleName_line_edit)
+        self.form_layout.addRow(self.font_size_label, self.font_size_input)
+        self.form_layout.addRow(self.rotation_label, self.rotation_input)
         self.form_layout.addRow("", self.generate_button)
 
         self.group_box.setLayout(self.form_layout)
@@ -185,11 +199,6 @@ class SettingsWidget(QWidget):
 
         self.output_folder_button.clicked.connect(self.select_output_folder)
         self.generate_button.clicked.connect(self.on_generate_stl)
-
-    def update_smoothing_label(self):
-        self.smoothing_label.setText(
-            f"Smoothing Level: {self.smoothing_slider.value()}"
-        )
 
     def select_output_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Output Folder", "")
@@ -218,6 +227,8 @@ class SettingsWidget(QWidget):
             "height_scale": self.height_input.value(),
             "output_path": output_path,
             "sample_name": sample_name,
+            "font_size": self.font_size_input.value(),
+            "rotation_degrees": self.rotation_input.value(),
         }
 
     def set_default_filename(self, default_name):
