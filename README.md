@@ -37,6 +37,7 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 - Blender’s built-in texture interpolation is applied by default to smooth the displacement across the mesh.
 
 ---
+
 ## Examples
 100x100 Pixel Scan:
 <p float="left">
@@ -46,7 +47,7 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 </p>
 500x500 Pixel Scan:
 <p float="left">
-  <img src="https://github.com/user-attachments/assets/0528442a-5776-49b8-9080-0b21d35240da" width="200" />
+  <img src="https://github.com/user-attachments/assets/5f0a064d-282c-46fa-a54b-d2be2d40ddc4" width="200" />
   <img src="https://github.com/user-attachments/assets/75caa05d-dd22-46d9-89e4-654fc58e9a70" width="200" /> 
   <img src="https://github.com/user-attachments/assets/37b160d9-a16b-40b9-848a-ab4e81dcb4f8" width="200" />
 </p>
