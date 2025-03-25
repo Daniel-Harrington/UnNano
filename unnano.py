@@ -124,9 +124,9 @@ def generate_stl(tiff_filepath, settings):
         print("Text object not found or the object is not a text object.")
 
     # Save the modified .blend file
-    output_blend_file = "modified_template.blend"
-    bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
-    print(f"Modified blend file saved to {output_blend_file}")
+    # output_blend_file = "modified_template.blend"
+    # bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
+    # print(f"Modified blend file saved to {output_blend_file}")
 
     # Save the STL
     bpy.ops.wm.stl_export(filepath=str(output_path))
