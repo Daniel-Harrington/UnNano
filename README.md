@@ -10,17 +10,20 @@ UnNano enables the conversion of Thorlabs AFM data into 3D printable meshes in ~
 ## Usage
 
 1. **Prepare the Directory**  
-   Ensure that the project is located in a folder containing a subfolder named `model_template`.
+   Ensure that the unnano.py file is located in a folder containing a subfolder named `model_template`.
 
 2. **Install Dependencies**  
    Install the required dependencies by running the following command:  
    ```bash
    pip install -r requirements.txt
    ```
-
-3. **Add AFM Data**  
-   Place your Thorlabs AFM output file (in semicolon-delimited CSV format) in the designated folder.
-
+3. **Run The Program**
+   Start unnano.py
+   
+5. **Add AFM Data**  
+   Drag in your Thorlabs AFM output csv (in semicolon-delimited CSV format)
+6. **Generate STL**
+   Hit the generation button and retrieve your 3D .stl file
 ---
 
 ## Resolution Details
