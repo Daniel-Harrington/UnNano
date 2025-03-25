@@ -27,6 +27,8 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 ---
 ## Examples
 
-![scaled_cftest copy](https://github.com/user-attachments/assets/904d0803-18f5-49d2-843c-04e2eadbbece)
-![image](https://github.com/user-attachments/assets/5386cc74-b8b6-4ccc-bf03-1775d35bcae4)
-![image](https://github.com/user-attachments/assets/e1b7dd49-421b-4466-82df-59fa0759b683)
+<div style="display: flex; justify-content: space-around;">
+  <img src="https://github.com/user-attachments/assets/904d0803-18f5-49d2-843c-04e2eadbbece" alt="scaled_cftest copy" style="max-width: 30%; margin-right: 10px;">
+  <img src="https://github.com/user-attachments/assets/5386cc74-b8b6-4ccc-bf03-1775d35bcae4" alt="image" style="max-width: 30%; margin-right: 10px;">
+  <img src="https://github.com/user-attachments/assets/e1b7dd49-421b-4466-82df-59fa0759b683" alt="image" style="max-width: 30%;">
+</div>
