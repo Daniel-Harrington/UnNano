@@ -61,13 +61,12 @@ def csv_to_32bit_float_inverted_tiff(input_filepath):
     else:
         inverted = (val_max - data) / (val_max - val_min)
 
+    #  remove wierd last row of all 1s, probably from extra delimiter + inversion
+    inverted = inverted[:, :-1]
     # set outer border to 0 to allow clean mesh joining
-    if inverted.shape[0] > 1:
-        inverted[0, :] = 0.0
-        inverted[-1, :] = 0.0
-    if inverted.shape[1] > 1:
-        inverted[:, 0] = 0.0
-        inverted[:, -1] = 0.0
+    inverted = np.pad(
+        inverted, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0
+    )
 
     inverted_float32 = inverted.astype(np.float32)
 
