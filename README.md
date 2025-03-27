@@ -7,9 +7,9 @@ UnNano enables the conversion of Thorlabs AFM data into 3D printable meshes in ~
 
 ---
 ## Features
-- Safe removal of even extreme scanline artifacts
-- Fast Plane Leveling Tool
-- Adjustable Model Label
+- **Safe removal of even extreme scanline artifacts**
+- **Fast Plane Leveling Tool**
+- **Adjustable Model Label**
 ---
 
 ## Usage
