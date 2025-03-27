@@ -33,7 +33,6 @@ UnNano enables the conversion of Thorlabs AFM data into 3D printable meshes in ~
 
 The input CSV file is first converted into a **normalized 32-bit TIFF**, which preserves the relative height accuracy from the AFM data. This TIFF file is then applied to a high-resolution mesh consisting of **652,864 faces**. This mesh has more than sufficient resolution to faithfully represent the height data at the highest AFM resolution of **500×500 pixels**.
 
-- 1 row of pixels in the X-Y dimensions is set to **0** to fuse the mesh with its base layer.  
 - Blender’s built-in texture interpolation is applied by default to smooth the displacement across the mesh.
 
 ---
