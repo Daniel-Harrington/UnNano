@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QVBoxLayout,
+    QComboBox,
     QLabel,
     QPushButton,
     QLineEdit,
@@ -135,10 +136,10 @@ def generate_stl(tiff_filepath, settings):
 
 def remove_scanlines(tiff_filepath, settings):
     img = Image.open(tiff_filepath)
-    fast_axis = settings.get("fast_axis", "Y")
+    fast_axis = settings.get("fast_axis", 0)
     data = np.asarray(img)[1:-1, 1:-1]  # removes padding
     data = data.copy()
-    d2axis = np.diff(data, n=1, axis=0)
+    d2axis = np.diff(data, n=1, axis=fast_axis)
     d2axis = abs(d2axis)
     val_min = d2axis.min()
     val_max = d2axis.max()
@@ -158,28 +159,54 @@ def remove_scanlines(tiff_filepath, settings):
     inverted[inverted < 0.80] = 0
     rows, cols = np.where(inverted == 0)
     bad_rows = set(rows)
-    # Loop over each flawed point
-    for i, j in zip(rows, cols):
-        neighbors = []
 
-        # Check up neighbor (if exists)
-        if i - 1 >= 0:
-            if (i - 1) not in bad_rows:
-                neighbors.append(data[i - 1, j])
-            else:
-                if i - 2 >= 0:
-                    neighbors.append(data[i - 2, j])
+    if fast_axis == 0:
+        # Loop over each flawed point
+        for i, j in zip(rows, cols):
+            neighbors = []
 
-        # Check down neighbor (if exists)
-        if i + 1 < data.shape[0]:
-            if (i + 1) not in bad_rows:
-                neighbors.append(data[i + 1, j])
-            else:
-                if i + 2 < data.shape[0]:
-                    neighbors.append(data[i + 2, j])
+            # Check up neighbor (if exists)
+            if i - 1 >= 0:
+                if (i - 1) not in bad_rows:
+                    neighbors.append(data[i - 1, j])
+                else:
+                    if i - 2 >= 0:
+                        neighbors.append(data[i - 2, j])
 
-        if neighbors:
-            data[i, j] = np.mean(neighbors)
+            # Check down neighbor (if exists)
+            if i + 1 < data.shape[0]:
+                if (i + 1) not in bad_rows:
+                    neighbors.append(data[i + 1, j])
+                else:
+                    if i + 2 < data.shape[0]:
+                        neighbors.append(data[i + 2, j])
+
+            if neighbors:
+                data[i, j] = np.mean(neighbors)
+    else:
+        # Loop over each flawed point
+        # just swapped i,j lol
+        for j, i in zip(rows, cols):
+            neighbors = []
+
+            # Check up neighbor (if exists)
+            if i - 1 >= 0:
+                if (i - 1) not in bad_rows:
+                    neighbors.append(data[i - 1, j])
+                else:
+                    if i - 2 >= 0:
+                        neighbors.append(data[i - 2, j])
+
+            # Check down neighbor (if exists)
+            if i + 1 < data.shape[0]:
+                if (i + 1) not in bad_rows:
+                    neighbors.append(data[i + 1, j])
+                else:
+                    if i + 2 < data.shape[0]:
+                        neighbors.append(data[i + 2, j])
+
+            if neighbors:
+                data[i, j] = np.mean(neighbors)
 
     data = np.pad(data, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0)
     img = Image.fromarray(data, mode="F")
@@ -268,7 +295,7 @@ class SettingsWidget(QWidget):
         self.setMinimumWidth(200)
         self.form_layout.setContentsMargins(8, 8, 8, 8)
         self.form_layout.setSpacing(10)
-        self.iterations_label = QLabel("Scanline Iterations:")
+        self.iterations_label = QLabel("Scan Heal Iterations:")
         self.iterations_input = QDoubleSpinBox()
         self.iterations_input.setRange(1, 10)
         self.iterations_input.setSingleStep(1)
@@ -277,6 +304,10 @@ class SettingsWidget(QWidget):
 
         self.plane_level_button = QPushButton("Plane Level")
         self.remove_scanlines_button = QPushButton("Heal Scanlines")
+        self.scan_axis_label = QLabel("Fast Scan Axis:")
+        self.scan_axis = QComboBox()
+        self.scan_axis.addItem("Y")
+        self.scan_axis.addItem("X")
 
         self.height_label = QLabel("Height Scale:")
         self.height_input = QDoubleSpinBox()
@@ -323,8 +354,9 @@ class SettingsWidget(QWidget):
         self.form_layout.addRow(self.SampleName_label, self.SampleName_line_edit)
         self.form_layout.addRow(self.font_size_label, self.font_size_input)
         self.form_layout.addRow(self.rotation_label, self.rotation_input)
-        self.form_layout.addRow(self.iterations_label, self.iterations_input)
         self.form_layout.addRow("", self.plane_level_button)
+        self.form_layout.addRow(self.scan_axis_label, self.scan_axis)
+        self.form_layout.addRow(self.iterations_label, self.iterations_input)
         self.form_layout.addRow("", self.remove_scanlines_button)
         self.form_layout.addRow("", self.generate_button)
         self.plane_level_button.clicked.connect(self.plane_level_requested)
@@ -373,6 +405,7 @@ class SettingsWidget(QWidget):
             "sample_name": sample_name,
             "font_size": self.font_size_input.value(),
             "rotation_degrees": self.rotation_input.value(),
+            "fast_axis": self.scan_axis.currentIndex(),
         }
 
     def set_default_filename(self, default_name):
