@@ -143,7 +143,7 @@ def remove_scanlines(tiff_filepath, settings):
     d2axis = abs(d2axis)
     val_min = d2axis.min()
     val_max = d2axis.max()
-    print(val_max)
+    # print(val_max)
     # Invert and  normalize to [0..1]
     #  Largest value -> 0, smallest -> 1
     # This just works the nicest with blender, trial and error ftw
@@ -153,7 +153,7 @@ def remove_scanlines(tiff_filepath, settings):
         inverted = (val_max - d2axis) / (val_max - val_min)
     val_min = inverted.min()
     val_max = inverted.max()
-    print(val_max, val_min)
+    # print(val_max, val_min)
 
     # Anything with a   derivative in the fast scanning axis than 80%
     inverted[inverted < 0.80] = 0
@@ -213,14 +213,14 @@ def remove_scanlines(tiff_filepath, settings):
     output_path = Path("C:/temp/outputtiff.tiff")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path, format="TIFF")
-    print(d2axis)
+    # print(d2axis)
     # adds padding back
 
-    pass
+    return
 
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
+# from mpl_toolkits.mplot3d import Axes3D
+# import matplotlib.pyplot as plt
 
 
 def plane_level(tiff_filepath):
@@ -233,15 +233,15 @@ def plane_level(tiff_filepath):
     y = np.arange(data.shape[0])
     X1, X2 = np.meshgrid(x, y)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(3, 1, 1, projection="3d")
-    jet = plt.get_cmap("jet")
+    # fig = plt.figure()
+    # ax = fig.add_subplot(3, 1, 1, projection="3d")
+    # jet = plt.get_cmap("jet")
 
     # Normalize the height data for display
     Y = data
 
     # Plot the initial topological surface
-    ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+    # ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
 
     # Regression
     X = np.hstack(
