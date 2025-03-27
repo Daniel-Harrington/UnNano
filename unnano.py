@@ -1,6 +1,5 @@
 import sys
 import csv
-import pymesh
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -74,6 +73,7 @@ def csv_to_32bit_float_inverted_tiff(input_filepath):
     output_path = Path("C:/temp/outputtiff.tiff")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path, format="TIFF")
+
     return output_path
 
 
@@ -123,9 +123,9 @@ def generate_stl(tiff_filepath, settings):
         print("Text object not found or the object is not a text object.")
 
     # Save the modified .blend file
-    # output_blend_file = "modified_template.blend"
-    # bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
-    # print(f"Modified blend file saved to {output_blend_file}")
+    output_blend_file = "modified_template.blend"
+    bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
+    print(f"Modified blend file saved to {output_blend_file}")
 
     # Save the STL
     bpy.ops.wm.stl_export(filepath=str(output_path))
@@ -133,8 +133,133 @@ def generate_stl(tiff_filepath, settings):
     return output_path
 
 
+def remove_scanlines(tiff_filepath, settings):
+    img = Image.open(tiff_filepath)
+    fast_axis = settings.get("fast_axis", "Y")
+    data = np.asarray(img)[1:-1, 1:-1]  # removes padding
+    data = data.copy()
+    d2axis = np.diff(data, n=1, axis=0)
+    d2axis = abs(d2axis)
+    val_min = d2axis.min()
+    val_max = d2axis.max()
+    print(val_max)
+    # Invert and  normalize to [0..1]
+    #  Largest value -> 0, smallest -> 1
+    # This just works the nicest with blender, trial and error ftw
+    if val_min == val_max:
+        inverted = np.zeros_like(d2axis, dtype=np.float32)
+    else:
+        inverted = (val_max - d2axis) / (val_max - val_min)
+    val_min = inverted.min()
+    val_max = inverted.max()
+    print(val_max, val_min)
+
+    # Anything with a   derivative in the fast scanning axis than 80%
+    inverted[inverted < 0.80] = 0
+    rows, cols = np.where(inverted == 0)
+    bad_rows = set(rows)
+    # Loop over each flawed point
+    for i, j in zip(rows, cols):
+        neighbors = []
+
+        # Check up neighbor (if exists)
+        if i - 1 >= 0:
+            if (i - 1) not in bad_rows:
+                neighbors.append(data[i - 1, j])
+            else:
+                if i - 2 >= 0:
+                    neighbors.append(data[i - 2, j])
+
+        # Check down neighbor (if exists)
+        if i + 1 < data.shape[0]:
+            if (i + 1) not in bad_rows:
+                neighbors.append(data[i + 1, j])
+            else:
+                if i + 2 < data.shape[0]:
+                    neighbors.append(data[i + 2, j])
+
+        if neighbors:
+            data[i, j] = np.mean(neighbors)
+
+    data = np.pad(data, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0)
+    img = Image.fromarray(data, mode="F")
+    output_path = Path("C:/temp/outputtiff.tiff")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path, format="TIFF")
+    print(d2axis)
+    # adds padding back
+
+    pass
+
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
+
+def plane_level(tiff_filepath):
+    img = Image.open(tiff_filepath)
+    data = np.asarray(img)[1:-1, 1:-1]  # removes padding
+    data = data.copy()
+
+    # Create coordinate arrays for the image dimensions
+    x = np.arange(data.shape[1])
+    y = np.arange(data.shape[0])
+    X1, X2 = np.meshgrid(x, y)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(3, 1, 1, projection="3d")
+    jet = plt.get_cmap("jet")
+
+    # Normalize the height data for display
+    Y = data
+
+    # Plot the initial topological surface
+    ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+
+    # Regression
+    X = np.hstack(
+        (
+            np.reshape(X1, (data.shape[1] * data.shape[0], 1)),
+            np.reshape(X2, (data.shape[1] * data.shape[0], 1)),
+        )
+    )
+    X = np.hstack((np.ones((data.shape[1] * data.shape[0], 1)), X))
+    YY = np.reshape(Y, (data.shape[1] * data.shape[0], 1))
+
+    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.transpose(), X)), X.transpose()), YY)
+
+    plane = np.reshape(np.dot(X, theta), (data.shape[0], data.shape[1]))
+
+    # ax = fig.add_subplot(3, 1, 2, projection="3d")
+    # ax.plot_surface(X1, X2, plane)
+    # ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+
+    # Subtraction
+    data = Y - plane
+    # ax = fig.add_subplot(3, 1, 3, projection="3d")
+    # ax.plot_surface(X1, X2, Y_sub, rstride=1, cstride=1, cmap=jet, linewidth=0)
+
+    # plt.savefig("subtracted.png")
+
+    if data.min() < 0:
+        data = data + abs(data.min())
+    # set outer border to 0 to allow clean mesh joining
+    data = np.pad(data, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0)
+
+    inverted_float32 = data.astype(np.float32)
+
+    img = Image.fromarray(inverted_float32, mode="F")
+    output_path = Path("C:/temp/outputtiff.tiff")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path, format="TIFF")
+
+    return
+
+
 class SettingsWidget(QWidget):
     generate_stl_requested = pyqtSignal(dict)
+    plane_level_signal = pyqtSignal()
+    remove_scanlines_signal = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -143,6 +268,15 @@ class SettingsWidget(QWidget):
         self.setMinimumWidth(200)
         self.form_layout.setContentsMargins(8, 8, 8, 8)
         self.form_layout.setSpacing(10)
+        self.iterations_label = QLabel("Scanline Iterations:")
+        self.iterations_input = QDoubleSpinBox()
+        self.iterations_input.setRange(1, 10)
+        self.iterations_input.setSingleStep(1)
+        self.iterations_input.setDecimals(0)
+        self.iterations_input.setValue(1)
+
+        self.plane_level_button = QPushButton("Plane Level")
+        self.remove_scanlines_button = QPushButton("Heal Scanlines")
 
         self.height_label = QLabel("Height Scale:")
         self.height_input = QDoubleSpinBox()
@@ -189,8 +323,12 @@ class SettingsWidget(QWidget):
         self.form_layout.addRow(self.SampleName_label, self.SampleName_line_edit)
         self.form_layout.addRow(self.font_size_label, self.font_size_input)
         self.form_layout.addRow(self.rotation_label, self.rotation_input)
+        self.form_layout.addRow(self.iterations_label, self.iterations_input)
+        self.form_layout.addRow("", self.plane_level_button)
+        self.form_layout.addRow("", self.remove_scanlines_button)
         self.form_layout.addRow("", self.generate_button)
-
+        self.plane_level_button.clicked.connect(self.plane_level_requested)
+        self.remove_scanlines_button.clicked.connect(self.scanlines_requested)
         self.group_box.setLayout(self.form_layout)
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -210,6 +348,13 @@ class SettingsWidget(QWidget):
             self.output_folder_line_edit.setPlaceholderText("Required")
             return
         self.generate_stl_requested.emit(settings)
+
+    def plane_level_requested(self):
+        self.plane_level_signal.emit()
+
+    def scanlines_requested(self):
+        iterations = int(self.iterations_input.value())
+        self.remove_scanlines_signal.emit(iterations)
 
     def get_settings(self):
         folder = self.output_folder_line_edit.text().strip()
@@ -324,9 +469,42 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         self.settings_widget.generate_stl_requested.connect(self.handle_generate_stl)
+        self.settings_widget.plane_level_signal.connect(self.handle_plane_level)
+        self.settings_widget.remove_scanlines_signal.connect(
+            self.handle_scanline_removal
+        )
         self.file_drop_widget.file_loaded.connect(
             self.settings_widget.set_default_filename
         )
+
+    def handle_scanline_removal(self, settings):
+        if self.file_drop_widget.current_tiff is None:
+            self.file_drop_widget.show_error(
+                "No file loaded! Please drop a file first."
+            )
+            return
+
+    def handle_plane_level(self):
+        if self.file_drop_widget.current_tiff is None:
+            self.file_drop_widget.show_error(
+                "No file loaded! Please drop a file first."
+            )
+            return
+
+        plane_level(self.file_drop_widget.current_tiff)
+        self.file_drop_widget.load_preview(self.file_drop_widget.current_tiff)
+
+    def handle_scanline_removal(self, iterations):
+        if self.file_drop_widget.current_tiff is None:
+            self.file_drop_widget.show_error(
+                "No file loaded! Please drop a file first."
+            )
+            return
+
+        for _ in range(iterations):
+            remove_scanlines(self.file_drop_widget.current_tiff, {})
+
+        self.file_drop_widget.load_preview(self.file_drop_widget.current_tiff)
 
     def handle_generate_stl(self, settings):
         if self.file_drop_widget.current_tiff is None:
