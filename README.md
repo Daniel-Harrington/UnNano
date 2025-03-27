@@ -6,6 +6,11 @@ A GUI Tool for Converting Thorlabs Educational AFM Data to 3D Printable Mesh (.s
 UnNano enables the conversion of Thorlabs AFM data into 3D printable meshes in ~100ms, providing high-resolution visualizations of 20×20 micrometer samples. Normalization of inputs occurs but relative height differences are preserved.
 
 ---
+## Features
+- Safe removal of even extreme scanline artifacts
+- Fast Plane Leveling Tool
+- Adjustable Model Label
+---
 
 ## Usage
 
