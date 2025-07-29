@@ -284,11 +284,6 @@ def remove_scanlines(tiff_filepath, settings):
 # from mpl_toolkits.mplot3d import Axes3D
 # import matplotlib.pyplot as plt
 
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-from pathlib import Path
-
 
 def plane_level(tiff_filepath):
     # Load image and remove padding
