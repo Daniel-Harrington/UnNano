@@ -61,12 +61,16 @@ def jpk_to_32bit_float_inverted_tiff(input_filepath):
 
 
 def jpk_qi_img_to_32bit_float_inverted_tiff(input_filepath):
-
+    """
+    tifffile.imread(str(fp), key=1).astype(np.float32)
+    """
     input_path = Path(input_filepath).resolve()
     data = tifffile.imread(str(input_path), key=1).astype(np.float32)
+    print(data)
     val_min = data.min()
     val_max = data.max()
-    # normalize to [0..1]
+    # Invert and  normalize to [0..1]
+    #  Largest value -> 0, smallest -> 1
     # This just works the nicest with blender, trial and error ftw
     if val_min == val_max:
         normalized = np.zeros_like(data, dtype=np.float32)
@@ -74,18 +78,18 @@ def jpk_qi_img_to_32bit_float_inverted_tiff(input_filepath):
         normalized = (data - val_min) / (val_max - val_min)
 
     # set outer border to 0 to allow clean mesh joining
-
-    normalized = normalized - np.average(data)
     normalized = np.pad(
         normalized, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0
     )
-
+    print("here")
     normalized_float32 = normalized.astype(np.float32)
+    print("here2 ")
 
     img = Image.fromarray(normalized_float32, mode="F")
     output_path = Path("C:/temp/outputtiff.tiff")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(output_path, format="TIFF")
+    print("here3 ")
 
     return output_path
 
