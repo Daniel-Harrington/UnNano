@@ -544,7 +544,7 @@ class FileDropWidget(QWidget):
             if valid:
                 break
         if not valid:
-            self.show_error("Invalid file type! Please use .csv")
+            self.show_error("Invalid file type!")
 
     def load_preview(self, file_path):
         self.current_tiff = file_path
