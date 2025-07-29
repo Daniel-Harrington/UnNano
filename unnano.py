@@ -24,6 +24,70 @@ import pandas as pd
 import bpy
 import open3d as o3d
 import math
+import matplotlib.pyplot as plt
+import tifffile
+
+
+def jpk_to_32bit_float_inverted_tiff(input_filepath):
+
+    input_path = Path(input_filepath).resolve()
+
+    data = tifffile.imread(str(input_path), key=1).astype(np.float32)
+
+    print("Jpk minmax:")
+
+    val_min = data.min()
+    val_max = data.max()
+    # Invert and  normalize to [0..1]
+    #  Largest value -> 0, smallest -> 1
+    # This just works the nicest with blender, trial and error ftw
+    if val_min == val_max:
+        inverted = np.zeros_like(data, dtype=np.float32)
+    else:
+        inverted = (val_max - data) / (val_max - val_min)
+    # set outer border to 0 to allow clean mesh joining
+    inverted = np.pad(
+        inverted, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0
+    )
+
+    inverted_float32 = inverted.astype(np.float32)
+
+    img = Image.fromarray(inverted_float32, mode="F")
+    output_path = Path("C:/temp/outputtiff.tiff")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path, format="TIFF")
+
+    return output_path
+
+
+def jpk_qi_img_to_32bit_float_inverted_tiff(input_filepath):
+
+    input_path = Path(input_filepath).resolve()
+    data = tifffile.imread(str(input_path), key=1).astype(np.float32)
+    val_min = data.min()
+    val_max = data.max()
+    # normalize to [0..1]
+    # This just works the nicest with blender, trial and error ftw
+    if val_min == val_max:
+        normalized = np.zeros_like(data, dtype=np.float32)
+    else:
+        normalized = (data - val_min) / (val_max - val_min)
+
+    # set outer border to 0 to allow clean mesh joining
+
+    normalized = normalized - np.average(data)
+    normalized = np.pad(
+        normalized, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0
+    )
+
+    normalized_float32 = normalized.astype(np.float32)
+
+    img = Image.fromarray(normalized_float32, mode="F")
+    output_path = Path("C:/temp/outputtiff.tiff")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_path, format="TIFF")
+
+    return output_path
 
 
 def csv_to_32bit_float_inverted_tiff(input_filepath):
@@ -52,7 +116,6 @@ def csv_to_32bit_float_inverted_tiff(input_filepath):
 
     val_min = data.min()
     val_max = data.max()
-
     # Invert and  normalize to [0..1]
     #  Largest value -> 0, smallest -> 1
     # This just works the nicest with blender, trial and error ftw
@@ -89,6 +152,7 @@ def generate_stl(tiff_filepath, settings):
     output_path = Path(settings.get("output_path", "C:/temp/output.obj")).resolve()
     SampleName = settings.get("sample_name", "Example")
     FontSize = settings.get("font_size", 1.00)
+    HeightScale = settings.get("height_scale", 1.00)
     blend_file_path = "model_template/scanModel.blend"
     bpy.ops.wm.open_mainfile(filepath=blend_file_path)
     rotation_degrees = settings.get("rotation_degrees", 0)
@@ -97,6 +161,7 @@ def generate_stl(tiff_filepath, settings):
     displacement_modifier = obj.modifiers.get("AFM_Scan")
 
     if displacement_modifier:
+        displacement_modifier.strength = HeightScale
         texture_slot = displacement_modifier.texture
         if texture_slot:
             new_image = bpy.data.images.load(str(tiff_path))
@@ -222,63 +287,90 @@ def remove_scanlines(tiff_filepath, settings):
 # from mpl_toolkits.mplot3d import Axes3D
 # import matplotlib.pyplot as plt
 
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+from pathlib import Path
+
 
 def plane_level(tiff_filepath):
+    # Load image and remove padding
     img = Image.open(tiff_filepath)
-    data = np.asarray(img)[1:-1, 1:-1]  # removes padding
+    data = np.asarray(img)[1:-1, 1:-1]
     data = data.copy()
-
+    print(data.min(), data.max())
     # Create coordinate arrays for the image dimensions
     x = np.arange(data.shape[1])
     y = np.arange(data.shape[0])
     X1, X2 = np.meshgrid(x, y)
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(3, 1, 1, projection="3d")
-    # jet = plt.get_cmap("jet")
-
-    # Normalize the height data for display
+    # Stage 1: Original topological surface
     Y = data
 
-    # Plot the initial topological surface
-    # ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+    # Regression (Least Squares Plane Fit)
+    X = np.hstack((np.reshape(X1, (-1, 1)), np.reshape(X2, (-1, 1))))
+    # Add intercept term
+    X = np.hstack((np.ones((X.shape[0], 1)), X))
+    YY = np.reshape(Y, (-1, 1))
 
-    # Regression
-    X = np.hstack(
-        (
-            np.reshape(X1, (data.shape[1] * data.shape[0], 1)),
-            np.reshape(X2, (data.shape[1] * data.shape[0], 1)),
-        )
-    )
-    X = np.hstack((np.ones((data.shape[1] * data.shape[0], 1)), X))
-    YY = np.reshape(Y, (data.shape[1] * data.shape[0], 1))
+    # Compute the regression parameters
+    theta = np.linalg.pinv(X.T @ X) @ (X.T @ YY)
+    plane = np.reshape(X @ theta, Y.shape)
 
-    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.transpose(), X)), X.transpose()), YY)
+    # Stage 3: Subtraction (Difference between original and fitted plane)
+    diff = Y - plane
+    if diff.min() < 0:
+        diff = diff + abs(diff.min())
+    # Pad the data to allow for clean mesh joining later if needed
+    diff = np.pad(diff, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0)
 
-    plane = np.reshape(np.dot(X, theta), (data.shape[0], data.shape[1]))
+    # Create a figure with 3 subplots in one row (left to right)
+    # fig = plt.figure(figsize=(24, 6))
+    # jet = plt.get_cmap("jet")
 
-    # ax = fig.add_subplot(3, 1, 2, projection="3d")
-    # ax.plot_surface(X1, X2, plane)
-    # ax.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+    # title_fontsize = 20
+    # label_fontsize = 18
 
-    # Subtraction
-    data = Y - plane
-    # ax = fig.add_subplot(3, 1, 3, projection="3d")
-    # ax.plot_surface(X1, X2, Y_sub, rstride=1, cstride=1, cmap=jet, linewidth=0)
+    # Subplot 1: Original Surface Data
+    # ax1 = fig.add_subplot(1, 3, 1, projection="3d")
+    # surf_orig = ax1.plot_surface(X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0)
+    # ax1.set_title("Unlevel Scanned Heightmap Data", fontsize=title_fontsize)
+    # ax1.set_xlabel("X", fontsize=label_fontsize)
+    # ax1.set_ylabel("Y", fontsize=label_fontsize)
 
-    # plt.savefig("subtracted.png")
+    # Subplot 2: Overlay of Regression Plane and Original Surface
+    # ax2 = fig.add_subplot(1, 3, 2, projection="3d")
+    # surf_plane = ax2.plot_surface(
+    #     X1, X2, plane, rstride=1, cstride=1, linewidth=0, alpha=1
+    # )
+    # surf_overlay = ax2.plot_surface(
+    #     X1, X2, Y, rstride=1, cstride=1, cmap=jet, linewidth=0, alpha=0.5
+    # )
+    # ax2.set_title("Linear Plane Fit To Heightmap Data", fontsize=title_fontsize)
+    # ax2.set_xlabel("X", fontsize=label_fontsize)
+    # ax2.set_ylabel("Y", fontsize=label_fontsize)
 
-    if data.min() < 0:
-        data = data + abs(data.min())
-    # set outer border to 0 to allow clean mesh joining
-    data = np.pad(data, pad_width=((1, 1), (1, 1)), mode="constant", constant_values=0)
+    # Subplot 3: Plane Subtracted Surface Data
+    # ax3 = fig.add_subplot(1, 3, 3, projection="3d")
+    # # Remove the padding for the plot (use the inner portion)
+    # surf_diff = ax3.plot_surface(
+    #     X1, X2, diff[1:-1, 1:-1], rstride=1, cstride=1, cmap=jet, linewidth=0
+    # )
+    # ax3.set_title("Plane Subtracted Level Heightmap Data", fontsize=title_fontsize)
+    # ax3.set_xlabel("X", fontsize=label_fontsize)
+    # ax3.set_ylabel("Y", fontsize=label_fontsize)
 
-    inverted_float32 = data.astype(np.float32)
+    # plt.tight_layout()
+    # plt.show()
+    print(theta)
+    print(diff.min(), diff.max())
 
-    img = Image.fromarray(inverted_float32, mode="F")
+    # Optionally, save the final diff image as a TIFF file
+    inverted_float32 = diff.astype(np.float32)
     output_path = Path("C:/temp/outputtiff.tiff")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(output_path, format="TIFF")
+    img_output = Image.fromarray(inverted_float32, mode="F")
+    img_output.save(output_path, format="TIFF")
 
     return
 
@@ -447,6 +539,17 @@ class FileDropWidget(QWidget):
                 file_path = csv_to_32bit_float_inverted_tiff(file_path)
                 self.load_preview(file_path)
                 valid = True
+            elif file_path.suffix.lower() == ".jpk-qi-image":
+                # Bruker/JPK QI image
+                file_path = jpk_qi_img_to_32bit_float_inverted_tiff(file_path)
+                self.load_preview(file_path)
+                valid = True
+            elif file_path.suffix.lower() == ".jpk":
+                # Bruker/JPK QI image
+                file_path = jpk_to_32bit_float_inverted_tiff(file_path)
+                self.load_preview(file_path)
+                valid = True
+            if valid:
                 break
         if not valid:
             self.show_error("Invalid file type! Please use .csv")
@@ -493,7 +596,8 @@ class MainWindow(QMainWindow):
         layout.setSpacing(10)
 
         self.file_drop_widget = FileDropWidget(
-            "Drag and Drop a .csv from a Thorlabs AFM", self
+            "Drag and Drop a .csv from a Thorlabs AFM, or a .jpk, or a .jpk-qi-image",
+            self,
         )
         self.settings_widget = SettingsWidget()
 
