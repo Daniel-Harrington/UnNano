@@ -148,6 +148,7 @@ def generate_stl(tiff_filepath, settings):
     tiff_path = Path(tiff_filepath).resolve()
     output_path = Path(settings.get("output_path", "C:/temp/output.obj")).resolve()
     SampleName = settings.get("sample_name", "Example")
+    SampleWidth = settings.get("sample_width", "0")
     FontSize = settings.get("font_size", 1.00)
     HeightScale = settings.get("height_scale", 1.00)
     blend_file_path = "model_template/scanModel.blend"
@@ -185,6 +186,16 @@ def generate_stl(tiff_filepath, settings):
     else:
         print("Text object not found or the object is not a text object.")
 
+    # Change Scale
+    text_obj = bpy.data.objects.get("Zero.003")  # I should rename this in the template
+    if text_obj and text_obj.type == "FONT":
+
+        if SampleWidth.is_integer():
+            SampleWidth = int(SampleWidth)
+        text_obj.data.body = str(SampleWidth) + "µm"
+        print(f"Scale object updated: {text_obj.data.body}")
+    else:
+        print("Text object not found or the object is not a text object.")
     # Save the modified .blend file
     output_blend_file = "modified_template.blend"
     bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
@@ -400,6 +411,13 @@ class SettingsWidget(QWidget):
         self.height_input.setDecimals(2)
         self.height_input.setValue(1.0)
 
+        self.sample_width_label = QLabel("Sample Width (µm):")
+        self.sample_width_input = QDoubleSpinBox()
+        self.sample_width_input.setRange(0.5, 100)
+        self.sample_width_input.setSingleStep(0.5)
+        self.sample_width_input.setDecimals(1)
+        self.sample_width_input.setValue(10)
+
         self.font_size_label = QLabel("Font Size:")
         self.font_size_input = QDoubleSpinBox()
         self.font_size_input.setRange(0.1, 100.0)
@@ -433,6 +451,7 @@ class SettingsWidget(QWidget):
         self.generate_button = QPushButton("Generate STL")
 
         self.form_layout.addRow(self.height_label, self.height_input)
+        self.form_layout.addRow(self.sample_width_label, self.sample_width_input)
         self.form_layout.addRow(self.output_folder_label, folder_layout)
         self.form_layout.addRow(self.output_file_label, self.output_file_line_edit)
         self.form_layout.addRow(self.SampleName_label, self.SampleName_line_edit)
@@ -487,6 +506,7 @@ class SettingsWidget(QWidget):
             "height_scale": self.height_input.value(),
             "output_path": output_path,
             "sample_name": sample_name,
+            "sample_width": self.sample_width_input.value(),
             "font_size": self.font_size_input.value(),
             "rotation_degrees": self.rotation_input.value(),
             "fast_axis": self.scan_axis.currentIndex(),
