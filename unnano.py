@@ -20,11 +20,11 @@ from PyQt6.QtGui import QPixmap
 from pathlib import Path
 import numpy as np
 from PIL import Image
-import pandas as pd
 import bpy
 import open3d as o3d
 import math
-import matplotlib.pyplot as plt
+
+# import matplotlib.pyplot as plt
 import tifffile
 
 
@@ -196,13 +196,18 @@ def generate_stl(tiff_filepath, settings):
         print(f"Scale object updated: {text_obj.data.body}")
     else:
         print("Text object not found or the object is not a text object.")
+
     # Save the modified .blend file
     output_blend_file = "modified_template.blend"
     bpy.ops.wm.save_as_mainfile(filepath=output_blend_file)
     print(f"Modified blend file saved to {output_blend_file}")
 
     # Save the STL
-    bpy.ops.wm.stl_export(filepath=str(output_path))
+    bpy.ops.wm.stl_export(
+        filepath=str(output_path),
+        apply_modifiers=True,
+        global_scale=60.04,  # 6004% works best with the library printer
+    )
     print(f"Stl saved to {output_path}")
     return output_path
 
