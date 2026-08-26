@@ -43,7 +43,7 @@ The input CSV file is first converted into a **normalized 32-bit TIFF**, which p
 - Blender’s built-in texture interpolation is applied by default to smooth the displacement across the mesh.
 
 ## A Note on Settings
-The Z-scale Settings is a multiplier relative to the x-y scale 
+The Z-scale setting is a multiplier relative to the x-y scale 
 (i.e. a Z-scale of 0.5 on a 10 μm² x-y plane means the tallest feature is 5 μm)
 
 ---
